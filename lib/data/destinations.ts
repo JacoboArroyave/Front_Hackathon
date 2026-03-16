@@ -1,106 +1,50 @@
-import type { Destination } from '@/lib/types';
+// ============================================================
+//  lib/data/destinations.ts
+//  Antes tenía 3 destinos hardcodeados (array estático)
+//  Ahora trae los datos reales desde el backend
+// ============================================================
 
-export const destinations: Destination[] = [
-  {
-    id: 'nevado-ruiz',
-    name: 'Parque Nacional Natural Los Nevados',
-    slug: 'nevado-ruiz',
-    description:
-      'Majestuoso parque natural que alberga el volcán Nevado del Ruiz y ecosistemas únicos de páramo.',
-    shortDescription: 'Volcán activo y paisajes de páramo únicos',
-    category: 'naturaleza',
-    location: {
-      municipality: 'Villamaría',
-      coordinates: { lat: 4.8917, lng: -75.3222 },
-      altitude: 5321,
-      climate: 'Páramo - 5°C promedio',
-    },
-    images: ['/images/nevado-ruiz.jpg'],
-    priceRange: { min: 150000, max: 350000, currency: 'COP' },
-    duration: { minHours: 8, maxHours: 12, recommended: 'Día completo' },
-    highlights: ['Volcán activo', 'Frailejones', 'Lagunas glaciares'],
-    rating: 4.9,
-    reviewCount: 1250,
-    tags: ['naturaleza', 'senderismo', 'aventura'],
-    isPopular: true,
-    activities: [
-      {
-        id: 'nevado-hiking',
-        name: 'Ascenso al Nevado',
-        description: 'Caminata guiada hasta zonas de alta montaña',
-        duration: '6-8 horas',
-        difficulty: 'dificil',
-        included: ['Guía', 'Seguro', 'Refrigerio'],
-        price: 280000,
-      },
-    ],
-  },
-  {
-    id: 'termales-santa-rosa',
-    name: 'Termales de Santa Rosa de Cabal',
-    slug: 'termales-santa-rosa',
-    description:
-      'Aguas termales naturales rodeadas de vegetación tropical y cascadas para relajación total.',
-    shortDescription: 'Aguas termales naturales con cascadas',
-    category: 'termalismo',
-    location: {
-      municipality: 'Santa Rosa de Cabal',
-      coordinates: { lat: 4.8694, lng: -75.6211 },
-      altitude: 1840,
-      climate: 'Templado húmedo - 18°C promedio',
-    },
-    images: ['/images/termales-santa-rosa.jpg'],
-    priceRange: { min: 50000, max: 180000, currency: 'COP' },
-    duration: { minHours: 3, maxHours: 8, recommended: 'Medio día o día completo' },
-    highlights: ['Cascada termal', 'Spa natural', 'Senderos'],
-    rating: 4.7,
-    reviewCount: 3420,
-    tags: ['relajación', 'termalismo', 'spa'],
-    isPopular: true,
-    activities: [
-      {
-        id: 'termales-day',
-        name: 'Día de Termalismo',
-        description: 'Acceso completo a piscinas termales',
-        duration: '4-6 horas',
-        difficulty: 'facil',
-        included: ['Entrada', 'Locker', 'Toalla'],
-        price: 85000,
-      },
-    ],
-  },
-  {
-    id: 'cocora',
-    name: 'Valle de Cocora',
-    slug: 'cocora',
-    description:
-      'Hogar de las palmas de cera más altas del mundo, con senderos y paisajes icónicos de Colombia.',
-    shortDescription: 'Las palmas de cera más altas del mundo',
-    category: 'naturaleza',
-    location: {
-      municipality: 'Salento',
-      coordinates: { lat: 4.6378, lng: -75.4875 },
-      altitude: 2400,
-      climate: 'Frío de montaña - 15°C promedio',
-    },
-    images: ['/images/cocora.jpg'],
-    priceRange: { min: 25000, max: 80000, currency: 'COP' },
-    duration: { minHours: 4, maxHours: 7, recommended: '5-6 horas' },
-    highlights: ['Palmas de cera', 'Senderismo', 'Reserva natural'],
-    rating: 4.9,
-    reviewCount: 4200,
-    tags: ['naturaleza', 'senderismo', 'fotografía'],
-    isPopular: true,
-    activities: [
-      {
-        id: 'cocora-hike',
-        name: 'Senderismo Valle de Cocora',
-        description: 'Caminata circular completa del valle',
-        duration: '5-6 horas',
-        difficulty: 'moderado',
-        included: ['Guía', 'Bastones', 'Refrigerio'],
-        price: 55000,
-      },
-    ],
-  },
-];
+import type { Destination } from '@/lib/types';
+import { getAccommodations, mapAccommodationToDestination } from '@/lib/api';
+
+// ─── Función principal ────────────────────────────────────────────────────────
+// Trae TODOS los destinos del backend y los convierte al formato del frontend
+// Los componentes llaman esta función con useEffect al montarse
+
+export async function fetchDestinations(): Promise<Destination[]> {
+  const accommodations = await getAccommodations();
+  return accommodations.map(mapAccommodationToDestination);
+}
+
+// ─── Helpers (equivalentes a los originales pero async) ───────────────────────
+// Los componentes que antes usaban destinations.find() ahora usan estas funciones
+
+// Busca un destino por su ID
+export async function getDestinationById(id: string): Promise<Destination | undefined> {
+  const all = await fetchDestinations();
+  return all.find(d => d.id === id);
+}
+
+// Filtra destinos por categoría
+export async function getDestinationsByCategory(category: string): Promise<Destination[]> {
+  const all = await fetchDestinations();
+  return all.filter(d => d.category === category);
+}
+
+// Devuelve solo los destinos marcados como populares
+export async function getPopularDestinations(): Promise<Destination[]> {
+  const all = await fetchDestinations();
+  return all.filter(d => d.isPopular);
+}
+
+// Busca destinos por texto libre (nombre, descripción, tags)
+export async function searchDestinations(query: string): Promise<Destination[]> {
+  const all = await fetchDestinations();
+  const q = query.toLowerCase();
+  return all.filter(
+    d =>
+      d.name.toLowerCase().includes(q) ||
+      d.description.toLowerCase().includes(q) ||
+      d.tags.some(tag => tag.toLowerCase().includes(q))
+  );
+}
