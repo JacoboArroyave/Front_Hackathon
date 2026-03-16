@@ -12,6 +12,19 @@ export const API_BASE_URL =
 
 // ─── Tipos que devuelve el backend ───────────────────────────────────────────
 
+// Login ----------------------
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  userId: number;
+}
+// --------------------------------
+
+
+
 // Así llega un alojamiento desde GET /accommodations
 export interface BackendAccommodation {
   accommodationId: number;
@@ -63,10 +76,9 @@ export interface ChatResponse {
   sessionId: string;
 }
 
-// ─── Función base para todos los fetch ───────────────────────────────────────
+// ─── Función base para todos los fetch ───────────────────────────────────
 // Genérica con <T>: le decimos qué tipo de dato esperamos de vuelta
 // Si el servidor responde con error (404, 500, etc.) lanza una excepción
-
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -78,6 +90,13 @@ async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+// ----  Login ---
+export async function login(userLogin: LoginRequest): Promise<LoginResponse> {
+  return fetchAPI<LoginResponse>('auth/login', {
+    method: 'POST',
+    body: JSON.stringify(userLogin),
+  });
 }
 
 // ─── Accommodations ──────────────────────────────────────────────────────────
