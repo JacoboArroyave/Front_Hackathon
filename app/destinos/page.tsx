@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -9,13 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  SlidersHorizontal, 
-  MapPin,
-  ArrowRight 
-} from 'lucide-react';
-import { destinations } from '@/lib/data/destinations';
+import { Search, MapPin, ArrowRight, Loader2 } from 'lucide-react';
+import { fetchDestinations } from '@/lib/data/destinations';
 import { useTrip } from '@/hooks/use-trip';
 import type { Destination, DestinationCategory } from '@/lib/types';
 
@@ -29,10 +24,24 @@ const categories: { value: DestinationCategory | 'todos'; label: string }[] = [
 ];
 
 export default function DestinosPage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  // ── Estado local ───────────────────────────────────────────────────────────
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]   = useState('');
   const [selectedCategory, setSelectedCategory] = useState<DestinationCategory | 'todos'>('todos');
+
   const { addDestination, isDestinationSelected, selectedDestinations } = useTrip();
 
+  // ── Cargar destinos del backend al montar la página ────────────────────────
+  useEffect(() => {
+    fetchDestinations()
+      .then(data => setDestinations(data))
+      .catch(() => setError('No se pudieron cargar los destinos. Verifica que el backend esté activo.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  // ── Filtrar según búsqueda y categoría ────────────────────────────────────
   const filteredDestinations = useMemo(() => {
     let filtered = destinations;
 
@@ -51,7 +60,7 @@ export default function DestinosPage() {
     }
 
     return filtered;
-  }, [selectedCategory, searchQuery]);
+  }, [destinations, selectedCategory, searchQuery]);
 
   const handleSelectDestination = (destination: Destination) => {
     if (!isDestinationSelected(destination.id)) {
@@ -59,11 +68,20 @@ export default function DestinosPage() {
     }
   };
 
+  const handleRetry = () => {
+    setIsLoading(true);
+    setError(null);
+    fetchDestinations()
+      .then(data => setDestinations(data))
+      .catch(() => setError('No se pudieron cargar los destinos.'))
+      .finally(() => setIsLoading(false));
+  };
+
   return (
     <main className="min-h-screen bg-background">
       <Header />
-      
-      {/* Hero Section */}
+
+      {/* Hero */}
       <section className="relative pt-24 pb-12 bg-secondary/30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
@@ -71,14 +89,14 @@ export default function DestinosPage() {
               Explora Todos los Destinos
             </h1>
             <p className="text-muted-foreground text-lg">
-              Descubre la diversidad de experiencias que ofrece el departamento de Caldas. 
+              Descubre la diversidad de experiencias que ofrece el departamento de Caldas.
               Desde majestuosos nevados hasta acogedores pueblos cafeteros.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Filters Section */}
+      {/* Filtros */}
       <section className="sticky top-16 z-30 bg-background border-b">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
@@ -93,7 +111,6 @@ export default function DestinosPage() {
                 />
               </div>
             </div>
-
             <Tabs
               value={selectedCategory}
               onValueChange={(v) => setSelectedCategory(v as DestinationCategory | 'todos')}
@@ -114,7 +131,7 @@ export default function DestinosPage() {
         </div>
       </section>
 
-      {/* Selected Destinations Banner */}
+      {/* Banner de destinos seleccionados */}
       {selectedDestinations.length > 0 && (
         <div className="bg-primary/10 border-b border-primary/20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
@@ -148,35 +165,59 @@ export default function DestinosPage() {
         </div>
       )}
 
-      {/* Destinations Grid */}
+      {/* Grid de destinos */}
       <section className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            <p className="text-muted-foreground">
-              {filteredDestinations.length} destino{filteredDestinations.length !== 1 ? 's' : ''} encontrado{filteredDestinations.length !== 1 ? 's' : ''}
-            </p>
-          </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDestinations.map((destination) => (
-              <DestinationCard
-                key={destination.id}
-                destination={destination}
-                onSelect={handleSelectDestination}
-              />
-            ))}
-          </div>
-
-          {filteredDestinations.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
-                <Search className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">No se encontraron destinos</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Intenta ajustar los filtros o buscar con otros términos.
-              </p>
+          {/* Cargando */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-muted-foreground">Cargando destinos...</p>
             </div>
+          )}
+
+          {/* Error */}
+          {!isLoading && error && (
+            <div className="text-center py-16">
+              <p className="text-destructive font-medium mb-4">{error}</p>
+              <Button variant="outline" onClick={handleRetry}>
+                Reintentar
+              </Button>
+            </div>
+          )}
+
+          {/* Resultados */}
+          {!isLoading && !error && (
+            <>
+              <div className="flex items-center justify-between mb-8">
+                <p className="text-muted-foreground">
+                  {filteredDestinations.length} destino{filteredDestinations.length !== 1 ? 's' : ''} encontrado{filteredDestinations.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredDestinations.map((destination) => (
+                  <DestinationCard
+                    key={destination.id}
+                    destination={destination}
+                    onSelect={handleSelectDestination}
+                  />
+                ))}
+              </div>
+
+              {filteredDestinations.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                    <Search className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">No se encontraron destinos</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    Intenta ajustar los filtros o buscar con otros términos.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

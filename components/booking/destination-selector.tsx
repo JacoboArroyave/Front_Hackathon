@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DestinationCard } from '@/components/destinations/destination-card';
 import { AIRecommendations } from './ai-recommendations';
-import { Search, Filter } from 'lucide-react';
-import { destinations } from '@/lib/data/destinations';
+import { Search, Loader2 } from 'lucide-react';
+import { fetchDestinations } from '@/lib/data/destinations';
 import { useTrip } from '@/hooks/use-trip';
 import type { Destination, DestinationCategory } from '@/lib/types';
 
@@ -20,11 +20,25 @@ const categories: { value: DestinationCategory | 'todos'; label: string }[] = [
 ];
 
 export function DestinationSelector() {
-  const [searchQuery, setSearchQuery] = useState('');
+  // ── Estado local ───────────────────────────────────────────────────────────
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]   = useState('');
   const [selectedCategory, setSelectedCategory] = useState<DestinationCategory | 'todos'>('todos');
-  
+
   const { addDestination, isDestinationSelected } = useTrip();
 
+  // ── Cargar destinos del backend al montar el componente ────────────────────
+  useEffect(() => {
+    fetchDestinations()
+      .then(data => setDestinations(data))
+      .catch(() => setError('No se pudieron cargar los destinos.'))
+      .finally(() => setIsLoading(false));
+  }, []); // [] = solo se ejecuta una vez al montar
+
+  // ── Filtrar destinos según búsqueda y categoría seleccionada ───────────────
+  // useMemo evita recalcular el filtro en cada render si no cambiaron los datos
   const filteredDestinations = useMemo(() => {
     let filtered = destinations;
 
@@ -43,7 +57,7 @@ export function DestinationSelector() {
     }
 
     return filtered;
-  }, [selectedCategory, searchQuery]);
+  }, [destinations, selectedCategory, searchQuery]);
 
   const handleSelectDestination = (destination: Destination) => {
     if (!isDestinationSelected(destination.id)) {
@@ -53,7 +67,8 @@ export function DestinationSelector() {
 
   return (
     <div className="space-y-6">
-      {/* Search and Filters */}
+
+      {/* ── Buscador y filtros por categoría ──────────────────────────────── */}
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -83,33 +98,54 @@ export function DestinationSelector() {
         </Tabs>
       </div>
 
-      {/* AI Recommendations Panel */}
+      {/* ── Panel de recomendaciones de IA ────────────────────────────────── */}
       <AIRecommendations onAddDestination={handleSelectDestination} />
 
-      {/* Results Count */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {filteredDestinations.length} destino{filteredDestinations.length !== 1 ? 's' : ''} encontrado{filteredDestinations.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+      {/* ── Estado de carga ───────────────────────────────────────────────── */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-16 gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="text-muted-foreground">Cargando destinos...</span>
+        </div>
+      )}
 
-      {/* Destinations Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {filteredDestinations.map((destination) => (
-          <DestinationCard
-            key={destination.id}
-            destination={destination}
-            onSelect={handleSelectDestination}
-          />
-        ))}
-      </div>
-
-      {filteredDestinations.length === 0 && (
+      {/* ── Estado de error ───────────────────────────────────────────────── */}
+      {!isLoading && error && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            No se encontraron destinos con los filtros seleccionados.
+          <p className="text-destructive text-sm">{error}</p>
+          <p className="text-muted-foreground text-xs mt-1">
+            Verifica que el backend esté corriendo en localhost:8080
           </p>
         </div>
+      )}
+
+      {/* ── Lista de destinos ─────────────────────────────────────────────── */}
+      {!isLoading && !error && (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {filteredDestinations.length} destino{filteredDestinations.length !== 1 ? 's' : ''} encontrado{filteredDestinations.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {filteredDestinations.map((destination) => (
+              <DestinationCard
+                key={destination.id}
+                destination={destination}
+                onSelect={handleSelectDestination}
+              />
+            ))}
+          </div>
+
+          {filteredDestinations.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                No se encontraron destinos con los filtros seleccionados.
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
