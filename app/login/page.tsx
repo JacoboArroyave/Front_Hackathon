@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-import { login } from '@/lib/api';
-import type { LoginRequest } from '@/lib/api';
+import { login } from '@/services/api';
+import type { LoginRequest } from '@/services/api';
 
 function LoginForm() {
   const [email, setEmail] = useState('');

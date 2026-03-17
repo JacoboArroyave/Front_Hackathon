@@ -4,8 +4,8 @@
 //  Ahora trae los datos reales desde el backend
 // ============================================================
 
-import type { Destination } from '@/lib/types';
-import { getAccommodations, mapAccommodationToDestination } from '@/lib/api';
+import type { Destination } from '@/models';
+import { getAccommodations, mapAccommodationToDestination } from '@/services/api';
 
 // ─── Función principal ────────────────────────────────────────────────────────
 // Trae TODOS los destinos del backend y los convierte al formato del frontend

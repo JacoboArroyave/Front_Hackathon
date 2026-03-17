@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DestinationCard } from '@/components/destinations/destination-card';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { fetchDestinations } from '@/lib/data/destinations';
-import type { Destination, DestinationCategory } from '@/lib/types';
+import type { Destination, DestinationCategory } from '@/models';
 
 const categories: { value: DestinationCategory | 'todos'; label: string }[] = [
   { value: 'todos', label: 'Todos' },
