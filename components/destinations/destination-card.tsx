@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Clock, Star, Heart, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Destination } from '@/lib/types';
+import type { Destination } from '@/models';
 
 interface DestinationCardProps {
   destination: Destination;

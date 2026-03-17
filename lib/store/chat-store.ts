@@ -4,8 +4,8 @@
 //  El hook useChat (hooks/use-chat.ts) consume este store
 // ============================================================
 
-import type { ChatMessage, TripPlan } from '@/lib/types';
-import { sendChatMessage, clearChatSession } from '@/lib/api';
+import type { ChatMessage, TripPlan } from '@/models';
+import { sendChatMessage, clearChatSession } from '@/services/api';
 
 // Tipo para los listeners (funciones que se llaman cuando el estado cambia)
 type Listener = () => void;

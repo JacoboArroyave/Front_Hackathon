@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { tripStore } from '@/lib/store/trip-store';
-import type { Destination, TripDetails, AIRecommendation } from '@/lib/types';
+import type { Destination, TripDetails, AIRecommendation } from '@/models';
 
 export function useTrip() {
   const state = useSyncExternalStore(

@@ -13,7 +13,7 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
-import type { TripPlan } from '@/lib/types';
+import type { TripPlan } from '@/models';
 
 interface TripPlanCardProps {
   plan: TripPlan;

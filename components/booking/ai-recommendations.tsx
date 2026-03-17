@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useTrip } from '@/hooks/use-trip';
 import { cn } from '@/lib/utils';
-import type { Destination, AIRecommendation } from '@/lib/types';
+import type { Destination, AIRecommendation } from '@/models';
 
 interface AIRecommendationsProps {
   onAddDestination: (destination: Destination) => void;

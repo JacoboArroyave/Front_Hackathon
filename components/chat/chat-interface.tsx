@@ -16,7 +16,7 @@ import {
 import { useChat } from '@/hooks/use-chat';
 import { TripPlanCard } from './trip-plan-card';
 import { cn } from '@/lib/utils';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage } from '@/models';
 
 const suggestedPrompts = [
   'Quiero un viaje de 3 días con mi familia',

@@ -9,8 +9,8 @@ import type {
   SelectedDestination,
   TripDetails,
   AIRecommendation,
-} from '@/lib/types';
-import { getAccommodations, mapAccommodationToDestination } from '@/lib/api';
+} from '@/models';
+import { getAccommodations, mapAccommodationToDestination } from '@/services/api';
 
 type Listener = () => void;
 

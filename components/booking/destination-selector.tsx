@@ -8,7 +8,7 @@ import { AIRecommendations } from './ai-recommendations';
 import { Search, Loader2 } from 'lucide-react';
 import { fetchDestinations } from '@/lib/data/destinations';
 import { useTrip } from '@/hooks/use-trip';
-import type { Destination, DestinationCategory } from '@/lib/types';
+import type { Destination, DestinationCategory } from '@/models';
 
 const categories: { value: DestinationCategory | 'todos'; label: string }[] = [
   { value: 'todos', label: 'Todos' },
