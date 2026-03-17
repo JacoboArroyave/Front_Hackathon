@@ -1,23 +1,58 @@
+// ============================================================
+//  services/accommodations.ts
+//  Tipos y funciones para interactuar con /accommodations
+//  Actualizado a la estructura real del backend
+// ============================================================
+
 import type { Destination, DestinationCategory } from '@/models';
 import { fetchAPI } from './client';
 
-export interface BackendAccommodation {
-  accommodationId: number;
-  type: 'HOTEL' | 'FARMING_HOUSE';
+// ─── Tipos que devuelve el backend real ──────────────────────────────────────
+// Estructura: GET /accommodations → BackendAccommodation[]
+// Cada accommodation pertenece a un Hotel (establecimiento)
+// El hotel puede ser tipo HOTEL o FARMING_HOUSE
+
+export interface BackendCity {
+  id: number;
   name: string;
-  location: string;
-  cost: number;
   description: string;
-  capacity: number;
-  activities: string; // viene como string separado por comas: "senderismo, café"
-  // campos extra de Hotel
-  rating?: number;
-  stars?: number;
-  phone?: string;
-  // campos extra de FarmingHouse
-  coffeeTour?: boolean;
-  birdSpecies?: string;
+  department: string;
 }
+
+export interface BackendEvent {
+  eventId: number;
+  name: string;
+  type: string;
+  durationMinutes: number;
+  eventDate: string | null;
+  description: string;
+}
+
+export interface BackendHotel {
+  hotelId: number;
+  name: string;
+  rating: number;
+  phone: string;
+  type: 'HOTEL' | 'FARMING_HOUSE';
+  coffeeTour: boolean;
+  birdSpecies: string | null;
+  activities: string | null;   // string separado por comas: "senderismo, café"
+  city: BackendCity;
+  accommodations: BackendAccommodation[]; // otras habitaciones del mismo hotel
+  events: BackendEvent[];
+}
+
+export interface BackendAccommodation {
+  id: number;
+  hotel: BackendHotel;
+  cost: number;
+  roomCapacity: number;
+  totalBeds: number;
+  totalBathrooms: number;
+  description: string;
+}
+
+// ─── Endpoints ────────────────────────────────────────────────────────────────
 
 export async function getAccommodations(): Promise<BackendAccommodation[]> {
   return fetchAPI<BackendAccommodation[]>('/accommodations');
@@ -27,68 +62,94 @@ export async function getAccommodationById(id: number): Promise<BackendAccommoda
   return fetchAPI<BackendAccommodation>(`/accommodations/${id}`);
 }
 
-export function mapAccommodationToDestination(acc: BackendAccommodation): Destination {
-  const category = inferCategory(acc.type, acc.activities);
+// ─── Mapper: BackendAccommodation → Destination (formato del frontend) ────────
+// Traduce la estructura del backend al formato que esperan los componentes
 
-  // Convierte "senderismo, café, termalismo" → ["senderismo", "café", "termalismo"]
-  const activitiesList = acc.activities
-    ? acc.activities.split(',').map(a => a.trim()).filter(Boolean)
+export function mapAccommodationToDestination(acc: BackendAccommodation): Destination {
+  const hotel = acc.hotel;
+  const category = inferCategory(hotel.type, hotel.activities ?? '');
+
+  // Convierte "senderismo, café, fogata" → ["senderismo", "café", "fogata"]
+  const activitiesList = hotel.activities
+    ? hotel.activities.split(',').map(a => a.trim()).filter(Boolean)
     : [];
 
+  // Nombre del lugar: "Hotel Boutique Manizales — Habitación doble"
+  // Para fincas usamos solo el nombre del hotel porque suele ser la finca completa
+  const name = hotel.type === 'FARMING_HOUSE'
+    ? hotel.name
+    : `${hotel.name}`;
+
   return {
-    id: String(acc.accommodationId),
-    name: acc.name,
-    slug: acc.name
+    id: String(acc.id),
+    name,
+    slug: name
       .toLowerCase()
-      .normalize('NFD')                        // separa tildes
-      .replace(/[\u0300-\u036f]/g, '')         // elimina tildes
-      .replace(/\s+/g, '-')                    // espacios → guiones
-      .replace(/[^a-z0-9-]/g, ''),             // elimina caracteres especiales
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')  // elimina tildes
+      .replace(/\s+/g, '-')             // espacios → guiones
+      .replace(/[^a-z0-9-]/g, ''),      // elimina caracteres especiales
     description: acc.description || '',
     shortDescription: acc.description
       ? acc.description.substring(0, 100) + '...'
       : '',
     category,
     location: {
-      municipality: acc.location.split(',')[0].trim(), // "Manizales, Caldas" → "Manizales"
-      coordinates: { lat: 5.0689, lng: -75.5174 },    // coordenadas generales de Caldas
+      municipality: hotel.city.name,
+      coordinates: { lat: 5.0689, lng: -75.5174 }, // coordenadas genéricas de Caldas
       altitude: 1800,
       climate: 'Templado - 18°C promedio',
     },
     images: [],
     priceRange: {
       min: acc.cost,
-      max: Math.round(acc.cost * 1.5),  // rango estimado: 50% más que el costo base
+      max: Math.round(acc.cost * 1.3), // rango estimado
       currency: 'COP',
     },
-    duration: { minHours: 3, maxHours: 8, recommended: 'Día completo' },
-    highlights: activitiesList.slice(0, 4), // primeras 4 actividades como highlights
-    rating: acc.rating ?? 4.5,
+    duration: { minHours: 1, maxHours: 24, recommended: 'Una noche' },
+    // highlights: actividades del hotel + info de habitación
+    highlights: [
+      ...activitiesList.slice(0, 3),
+      `${acc.roomCapacity} personas`,
+      `${acc.totalBeds} cama(s)`,
+    ].filter(Boolean),
+    rating: hotel.rating ?? 4.5,
     reviewCount: 0,
-    tags: [category, ...activitiesList.slice(0, 2)],
-    isPopular: true,
-    // Convierte cada actividad string en un objeto Activity
-    activities: activitiesList.map((act, i) => ({
-      id: `act-${acc.accommodationId}-${i}`,
-      name: act,
-      description: act,
-      duration: '2-3 horas',
-      difficulty: 'facil' as const,
-      included: [],
-      price: acc.cost,
-    })),
+    tags: [category, hotel.type === 'FARMING_HOUSE' ? 'finca' : 'hotel', hotel.city.name.toLowerCase()],
+    isPopular: hotel.rating >= 4.5,
+    // Convierte los eventos del hotel en actividades del frontend
+    activities: hotel.events.length > 0
+      ? hotel.events.map(event => ({
+          id: String(event.eventId),
+          name: event.name,
+          description: event.description,
+          duration: `${event.durationMinutes} min`,
+          difficulty: 'facil' as const,
+          included: [],
+          price: acc.cost,
+        }))
+      : activitiesList.map((act, i) => ({
+          id: `act-${acc.id}-${i}`,
+          name: act,
+          description: act,
+          duration: '2-3 horas',
+          difficulty: 'facil' as const,
+          included: [],
+          price: acc.cost,
+        })),
   };
 }
 
-function inferCategory(type: string, activities?: string): DestinationCategory {
-  const t = (type || '').toUpperCase();
-  const a = (activities || '').toLowerCase();
+// Deduce la categoría del frontend según el tipo y actividades del hotel
+function inferCategory(type: string, activities: string): DestinationCategory {
+  const t = type.toUpperCase();
+  const a = activities.toLowerCase();
 
   if (t === 'FARMING_HOUSE' || a.includes('café') || a.includes('cafe') || a.includes('catación')) {
     return 'cafetero';
   }
   if (a.includes('termal') || a.includes('spa') || a.includes('aguas')) return 'termalismo';
-  if (a.includes('avi') || a.includes('aves') || a.includes('senderismo') || a.includes('montaña')) {
+  if (a.includes('aves') || a.includes('avi') || a.includes('senderismo') || a.includes('montaña')) {
     return 'naturaleza';
   }
   if (a.includes('cultura') || a.includes('patrimonio') || a.includes('arquitectura')) {
@@ -96,5 +157,5 @@ function inferCategory(type: string, activities?: string): DestinationCategory {
   }
   if (a.includes('aventura') || a.includes('rafting') || a.includes('extremo')) return 'aventura';
 
-  return 'naturaleza'; // categoría por defecto
+  return 'naturaleza';
 }
